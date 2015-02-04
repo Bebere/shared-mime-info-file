@@ -15,17 +15,13 @@ my @files = ("\0");
 my %opts;
 my $follow_symlink = 1;
 my $restricted_tests = 0;
+my $dataset_change = 0;
 
 sub extended_file_test {
   my $file = $_[0];
-  foreach my $handlfile(@files) {
-    say "File treated: $file";
-    if ($handlfile ne "\0") {
-      say "Rehash time on $handlfile!";
-    }
-    my $desc = File::MimeInfo::Magic::describe(File::MimeInfo::Magic::mimetype($file));
-    say "$file: $desc";
-  }
+  my $mime = File::MimeInfo::Magic::mimetype($file);
+  say $mime;
+  return File::MimeInfo::Magic::describe($mime);
 }
 
 sub handler_default {
@@ -61,46 +57,61 @@ GetOptions(\%opts,
            "m=s" => \&handler_just_magic,
            "M=s" => \&handler_magic);
 
+say @File::MimeInfo::DIRS;
 say @files;
 foreach my $file(@ARGV) {
   my $desc;
-  my ($dev,$ino,$mode,$nlink,$uid,$gid,$rdev,$size,$atime,$mtime,$ctime,$blksize,$blocks) = $follow_symlink ? stat($file) : lstat($file);
-  if (S_ISREG($mode))
+  if (-e $file)
   {
-    $desc = "regular file";
-  }
-  elsif (S_ISDIR($mode))
-  {
-    $desc = "directory";
-  }
-  elsif (S_ISLNK($mode))
-  {
-    my $target = readlink($file);
-    $desc = "symbolic link to $target";
-  }
-  elsif (S_ISBLK($mode))
-  {
-    $desc = "block special";
-  }
-  elsif (S_ISCHR($mode))
-  {
-    $desc = "character special";
-  }
-  elsif (S_ISCHR($mode))
-  {
-    $desc = "character special";
-  }
-  elsif (S_ISFIFO($mode))
-  {
-    $desc = "fifo";
-  }
-  elsif (S_ISSOCK($mode))
-  {
-    $desc = "socket";
+    my ($dev,$ino,$mode,$nlink,$uid,$gid,$rdev,$size,$atime,$mtime,$ctime,$blksize,$blocks) = $follow_symlink ? stat($file) : lstat($file);
+   if (S_ISREG($mode))
+   {
+     if ($restricted_tests)
+	 {
+       $desc = "regular file";
+	 }
+	 else
+	 {
+	   $desc = extended_file_test($file)
+	 }
+   }
+   elsif (S_ISDIR($mode))
+   {
+     $desc = "directory";
+   }
+   elsif (S_ISLNK($mode))
+   {
+     my $target = readlink($file);
+     $desc = "symbolic link to $target";
+   }
+   elsif (S_ISBLK($mode))
+   {
+     $desc = "block special";
+   }
+   elsif (S_ISCHR($mode))
+   {
+     $desc = "character special";
+   }
+   elsif (S_ISCHR($mode))
+   {
+     $desc = "character special";
+   }
+   elsif (S_ISFIFO($mode))
+   {
+     $desc = "fifo";
+   }
+   elsif (S_ISSOCK($mode))
+   {
+     $desc = "socket";
+   }
+   else
+   {
+     $desc = "unknown";
+   }
   }
   else
   {
-    $desc = "unknown";
+    $desc = "cannot open";  
   }
   say "$file: $desc";
 }
