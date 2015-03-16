@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 
-use warnings;
+# use warnings;
 use strict;
 use 5.010;
 
@@ -19,19 +19,33 @@ my $dataset_change = 0;
 
 sub extended_file_test {
   my $file = $_[0];
-  my $mime = File::MimeInfo::Magic::mimetype($file);
-  say $mime;
-  return File::MimeInfo::Magic::describe($mime);
+  my $size = $_[1];
+  if($size == 0)
+  {
+    return "empty";
+  }
+  else
+  {
+    my $mime = File::MimeInfo::Magic::mimetype($file);
+#   say $mime;
+    my $desc = File::MimeInfo::Magic::describe($mime);
+    if($desc =~ /script/ and $desc !~ /shell script/) {
+      $desc =~ s/(script)/\1, executable text/;
+    }
+    $desc =~ s/(shell script)/\1 \(commands text\)/;
+    $desc =~ s/(\b?.+\b?) source code/\1 program text/;
+    return $desc
+  }
 }
 
 sub handler_default {
-  say "Add default files";
+#   say "Add default files";
   push @files, "\0";
 }
 
 sub handler_just_magic {
   my ($opt_name, $opt_value) = @_;
-  say "Option name is $opt_name and value is $opt_value";
+#   say "Option name is $opt_name and value is $opt_value";
   push @files, $opt_value;
 }
 
@@ -41,12 +55,12 @@ sub handler_magic {
 }
 
 sub ident_symlink {
-  say "Identify symlinks as symlinks";
+#   say "Identify symlinks as symlinks";
   $follow_symlink = 0;
 }
 
 sub restrict_tests {
-  say "Restricting file tests";
+#   say "Restricting file tests";
   $restricted_tests = 1;
 }
 
@@ -57,8 +71,8 @@ GetOptions(\%opts,
            "m=s" => \&handler_just_magic,
            "M=s" => \&handler_magic);
 
-say @File::MimeInfo::DIRS;
-say @files;
+# say @File::MimeInfo::DIRS;
+# say @files;
 foreach my $file(@ARGV) {
   my $desc;
   if (-e $file)
@@ -67,13 +81,13 @@ foreach my $file(@ARGV) {
    if (S_ISREG($mode))
    {
      if ($restricted_tests)
-	 {
+     {
        $desc = "regular file";
-	 }
-	 else
-	 {
-	   $desc = extended_file_test($file)
-	 }
+     }
+     else
+     {
+       $desc = extended_file_test($file, $size)
+     }
    }
    elsif (S_ISDIR($mode))
    {
@@ -115,4 +129,3 @@ foreach my $file(@ARGV) {
   }
   say "$file: $desc";
 }
-say "Cousin Willie!";
